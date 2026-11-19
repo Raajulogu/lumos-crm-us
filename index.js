@@ -3,8 +3,11 @@ import dotenv from "dotenv";
 import cors from "cors";
 import http from "http";
 
-// Routes
+// Database
 import { dbConnection } from "./db.js";
+
+// Routes
+import apiRoutes from "./routes/index.js";
 
 // Error handling & utilities
 import { AppError } from "./errors/index.js";
@@ -13,30 +16,28 @@ import { logger } from "./utils/logger.js";
 
 // ENV Configuration
 dotenv.config();
-const PORT = process.env.PORT;
-
-const allowedOrigins = [
-  "http://localhost:3000",
-];
+const PORT = process.env.PORT || 5000;
 
 // Middleware
 const app = express();
 app.use(requestId);
 app.use(express.json());
-app.use(cors({ origin: allowedOrigins }));
-// Removed global 40s timeout to prevent 504 errors on large uploads
+app.use(express.urlencoded({ extended: true }));
+app.use(cors({ origin: true, credentials: true }));
 
 const server = http.createServer(app);
 
-// DB Connection
-dbConnection();
-
-// Routes
+// Root Health Check
 app.get("/", (req, res) => {
-  res.send("Backend Service is running!");
+  res.json({
+    success: true,
+    message: "Lumos CRM Backend Service is running!",
+    timestamp: new Date().toISOString(),
+  });
 });
 
-// app.use("/auth", authRouter);
+// Mount All V1 API Routes
+app.use("/api/v1", apiRoutes);
 
 // 404 Catch-All Handler (For undefined routes)
 app.use((req, res, next) => {
@@ -46,16 +47,35 @@ app.use((req, res, next) => {
 // Central Error Handling Middleware (Catches all forwarded and unhandled errors)
 app.use(errorHandler);
 
-// Server Start
-server.listen(PORT, () => {
-  logger.info(`Dotzza Unified Backend is running`);
-  logger.info(`HTTP + WebSocket server listening on port ${PORT}`);
+// Start Server & Connect Database
+async function startServer() {
+  try {
+    if (process.env.MONGO_URL || process.env.MONGO_URI) {
+      await dbConnection();
+    } else {
+      logger.warn("⚠️ MONGO_URL not provided. Running server without database connection.");
+    }
+
+    server.listen(PORT, () => {
+      logger.info(`🚀 Lumos CRM Backend is running`);
+      logger.info(`📡 HTTP API listening on port ${PORT}`);
+    });
+  } catch (error) {
+    logger.error("Failed to start server:", error);
+    // Still listen so healthcheck / routes can reply with informative DB error if desired
+    server.listen(PORT, () => {
+      logger.warn(`Server running in degraded state on port ${PORT}`);
+    });
+  }
+}
+
+startServer();
+
+// Process-level handlers for crash prevention
+process.on("unhandledRejection", (reason) => {
+  logger.error("🔥 Process Unhandled Rejection:", reason);
 });
 
-// Process-level handlers for crash prevention (ARCH-01)
-process.on('unhandledRejection', (reason, promise) => {
-  logger.error('🔥 Process Unhandled Rejection:', { reason: reason?.stack || reason });
-});
-process.on('uncaughtException', (error) => {
-  logger.error('🔥 Process Uncaught Exception:', { error: error?.stack || error });
+process.on("uncaughtException", (error) => {
+  logger.error("🔥 Process Uncaught Exception:", error);
 });

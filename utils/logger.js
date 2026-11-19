@@ -1,5 +1,5 @@
 /**
- * Lightweight Structured Logger for Dotzza Backend
+ * Lightweight Structured Logger for Lumos CRM Backend
  * Provides structured JSON logging in production and readable formatting in development,
  * with comprehensive redaction of sensitive fields (passwords, tokens, cookies, secrets, DB URIs, etc.).
  */
@@ -85,34 +85,28 @@ export function sanitize(data, depth = 0, seen = new WeakSet()) {
 }
 
 class Logger {
-  constructor() {
-    this.isProduction = process.env.NODE_ENV === 'production';
-  }
-
   /**
    * Safely format and output log entry
    * @private
    */
   _log(level, message, meta = {}) {
-    const entry = {
-      timestamp: new Date().toISOString(),
-      level: level.toUpperCase(),
-      message,
-      ...(meta && Object.keys(meta).length > 0 ? { context: sanitize(meta) } : {}),
-      env: process.env.NODE_ENV || 'development',
-    };
+    let context = undefined;
+    if (meta instanceof Error) {
+      context = sanitize(meta);
+    } else if (meta && typeof meta === 'object' && Object.keys(meta).length > 0) {
+      context = sanitize(meta);
+    } else if (meta !== null && meta !== undefined && typeof meta !== 'object') {
+      context = { detail: meta };
+    }
 
+    const timestamp = new Date().toISOString();
     const isError = level === 'error';
     const outputStream = isError ? console.error : (level === 'warn' ? console.warn : console.log);
+    const color = level === 'error' ? '\x1b[31m' : (level === 'warn' ? '\x1b[33m' : (level === 'debug' ? '\x1b[36m' : '\x1b[32m'));
+    const reset = '\x1b[0m';
+    const metaStr = context !== undefined ? ` ${JSON.stringify(context)}` : '';
 
-    if (this.isProduction) {
-      outputStream(JSON.stringify(entry));
-    } else {
-      const color = level === 'error' ? '\x1b[31m' : (level === 'warn' ? '\x1b[33m' : (level === 'debug' ? '\x1b[36m' : '\x1b[32m'));
-      const reset = '\x1b[0m';
-      const metaStr = meta && Object.keys(meta).length > 0 ? `\n${JSON.stringify(sanitize(meta), null, 2)}` : '';
-      outputStream(`${color}[${entry.timestamp}] [${entry.level}]${reset} ${message}${metaStr}`);
-    }
+    outputStream(`${color}[${timestamp}] [${level.toUpperCase()}]${reset} ${message}${metaStr}`);
   }
 
   info(message, meta) {
@@ -128,7 +122,7 @@ class Logger {
   }
 
   debug(message, meta) {
-    if (process.env.DEBUG || !this.isProduction) {
+    if (process.env.DEBUG) {
       this._log('debug', message, meta);
     }
   }

@@ -27,32 +27,26 @@ export function errorHandler(err, req, res, next) {
     stack: err?.stack || appError.stack,
   });
 
-  // Build standard API error response
+  // Build standard API error response matching specification
+  let details = null;
+  if (appError.details !== null && appError.details !== undefined) {
+    const sanitizedDetails = sanitize(appError.details);
+    if (typeof sanitizedDetails === 'object' && !(appError.details instanceof Error)) {
+      details = sanitizedDetails;
+    }
+  }
+
   const response = {
     success: false,
     error: {
       code: appError.code,
       message: appError.message,
+      details,
+      timestamp: new Date().toISOString(),
+      path: req.originalUrl || req.url,
     },
     requestId,
   };
-
-  // Safely attach sanitized details if present (e.g. field-level validation errors)
-  if (appError.details !== null && appError.details !== undefined) {
-    const sanitizedDetails = sanitize(appError.details);
-    // Only attach if it's a valid object or array and not an Error instance
-    if (typeof sanitizedDetails === 'object' && !(appError.details instanceof Error)) {
-      response.error.details = sanitizedDetails;
-    }
-  }
-
-  // Development-only diagnostic info for internal/non-operational errors
-  if (process.env.NODE_ENV === 'development' && !appError.isOperational) {
-    response.error.debug = {
-      originalMessage: err?.message || null,
-      stack: err?.stack?.split('\n').map((line) => line.trim()) || null,
-    };
-  }
 
   return res.status(appError.statusCode).json(response);
 }
