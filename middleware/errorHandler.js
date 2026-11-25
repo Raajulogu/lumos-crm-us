@@ -38,6 +38,7 @@ export function errorHandler(err, req, res, next) {
 
   const response = {
     success: false,
+    message: appError.message,
     error: {
       code: appError.code,
       message: appError.message,

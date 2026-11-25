@@ -8,3 +8,6 @@ export { Notification } from './Notification.js';
 export { ServiceCategory } from './ServiceCategory.js';
 export { Settings } from './Settings.js';
 export { ActivityLog } from './ActivityLog.js';
+export { Task } from './Task.js';
+export { TaskPunch } from './TaskPunch.js';
+export { AttendanceRecord } from './AttendanceRecord.js';

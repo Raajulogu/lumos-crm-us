@@ -240,4 +240,35 @@ router.patch('/:id/status', async (req, res, next) => {
   }
 });
 
+/**
+ * PATCH /api/v1/employees/:id/password or /:employeeId/password
+ * Admin-controlled password reset/update for an employee
+ */
+router.patch(['/:id/password', '/:employeeId/password'], async (req, res, next) => {
+  try {
+    const targetId = req.params.employeeId || req.params.id;
+    const { password } = req.body;
+
+    if (!password || typeof password !== 'string' || password.length < 6) {
+      throw AppError.badRequest('Password is required and must be at least 6 characters long');
+    }
+
+    const employee = await User.findOne({ _id: targetId, role: 'employee' });
+    if (!employee) {
+      throw AppError.notFound('Employee not found');
+    }
+
+    employee.password = password;
+    employee.mustChangePassword = false;
+    await employee.save();
+
+    return sendSuccess(res, {
+      message: 'Employee password updated successfully',
+      data: null,
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
 export default router;

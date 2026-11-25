@@ -10,6 +10,8 @@ import employeeRoutes from './employee.routes.js';
 import analyticsRoutes from './analytics.routes.js';
 import settingsRoutes from './settings.routes.js';
 import dashboardRoutes from './dashboard.routes.js';
+import taskRoutes from './task.routes.js';
+import attendanceRoutes from './attendance.routes.js';
 
 const router = express.Router();
 
@@ -18,6 +20,8 @@ router.use('/clients', clientRoutes);
 router.use('/projects', projectRoutes);
 router.use('/', doubtRoutes);
 router.use('/', noteRoutes);
+router.use('/', taskRoutes);
+router.use('/attendance', attendanceRoutes);
 router.use('/followups', followupRoutes);
 router.use('/notifications', notificationRoutes);
 router.use('/employees', employeeRoutes);
