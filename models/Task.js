@@ -1,3 +1,6 @@
+// ------------------------------------------------------------
+// Task Model (Mongoose)
+// ------------------------------------------------------------
 import mongoose from 'mongoose';
 
 const taskSchema = new mongoose.Schema(
@@ -18,6 +21,9 @@ const taskSchema = new mongoose.Schema(
       trim: true,
       default: '',
     },
+    // New many‑to‑many assignees
+    assigneeIds: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+    // Legacy single assignee kept for backward compatibility (optional)
     assignedToId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
@@ -36,25 +42,14 @@ const taskSchema = new mongoose.Schema(
       default: 'medium',
       index: true,
     },
-    dueDate: {
-      type: Date,
-      default: null,
-    },
-    estimatedHours: {
-      type: Number,
-      default: 0,
-      min: 0,
-    },
-    totalLoggedMinutes: {
-      type: Number,
-      default: 0,
-      min: 0,
-    },
-    totalPunchesCount: {
-      type: Number,
-      default: 0,
-      min: 0,
-    },
+    dueDate: { type: Date, default: null },
+    estimatedHours: { type: Number, default: 0, min: 0 },
+    totalLoggedMinutes: { type: Number, default: 0, min: 0 },
+    totalPunchesCount: { type: Number, default: 0, min: 0 },
+    // New fields required by the spec
+    startDate: { type: Date, default: Date.now, required: true },
+    actualEndTime: { type: Date },
+    autoClosed: { type: Boolean, default: false },
   },
   {
     timestamps: true,
@@ -79,6 +74,7 @@ const taskSchema = new mongoose.Schema(
   }
 );
 
+// Indexes for common queries
 taskSchema.index({ projectId: 1, status: 1 });
 taskSchema.index({ assignedToId: 1, status: 1 });
 
